@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test -race -coverprofile=coverage.out ./...
+
+      - name: Coverage floor
+        run: |
+          # Enforced rather than claimed. The README states a number, and a
+          # number nobody enforces drifts.
+          pct=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub("%","",$3); print $3}')
+          echo "total coverage: ${pct}%"
+          awk -v p="$pct" 'BEGIN { if (p+0 < 70) { print "coverage " p "% is below the 70% floor"; exit 1 } }'
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt would change:"; echo "$unformatted"; exit 1
+          fi
+
+  traces-match-their-generator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+          cache: true
+      - name: Regenerate and diff
+        run: |
+          # A committed trace must be reproducible from the committed generator.
+          # Otherwise the traces are data of unknown provenance, which is the
+          # thing this project is against.
+          go run ./cmd/gen-traces
+          git diff --exit-code traces/ || {
+            echo "traces/ differs from what cmd/gen-traces produces."
+            echo "Run 'go run ./cmd/gen-traces' and commit the result."
+            exit 1
+          }
+
+  demo-runs-with-no-gpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+          cache: true
+      - name: The README demo must actually work
+        run: |
+          # The claim "try it without a GPU" is load-bearing for adoption, so it
+          # is tested on a runner that has no GPU.
+          out=$(go run ./cmd/truthscale top --replay traces/mixed-fleet.jsonl --last)
+          echo "$out"
+          for want in STARVED BUSY BLOCKED THROTTLED UNKNOWN; do
+            echo "$out" | grep -q "$want" || { echo "demo output lost $want"; exit 1; }
+          done
+          # An absent counter must render n/a and never 0%.
+          echo "$out" | grep -q "n/a" || { echo "no n/a in output: absence is being rendered as a number"; exit 1; }
+          go run ./cmd/truthscale explain --replay traces/h100-vllm-decode.jsonl
+
+      - name: Running without --replay must explain itself, not return an empty table
+        run: |
+          if go run ./cmd/truthscale top >/dev/null 2>&1; then
+            echo "top without --replay should fail rather than report an empty fleet"; exit 1
+          fi
