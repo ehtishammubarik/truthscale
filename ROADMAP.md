@@ -50,24 +50,27 @@ Shipped and tested.
 
 ## Next (v0.2): live, and worth alerting on
 
+[Milestone](https://github.com/ehtishammubarik/truthscale/milestone/1).
+
 | Item | Note |
 | :--- | :--- |
-| DCGM collector | Read real fields from `dcgm-exporter` or the DCGM socket. Detect and report unavailable fields rather than substituting |
-| vLLM collector | Scrape `/metrics`, correlate against the GPU sample on one monotonic clock |
-| `truthscale measure` | Establish this node's ceiling with a bounded, cancellable microbenchmark. Refuses to run when another process holds the GPU |
+| [DCGM collector](https://github.com/ehtishammubarik/truthscale/issues/1) | Read real fields. Detect and report unavailable ones rather than substituting a zero |
+| [vLLM collector](https://github.com/ehtishammubarik/truthscale/issues/2) | KV cache, queue depth, token throughput, correlated on one monotonic clock |
+| [`truthscale measure`](https://github.com/ehtishammubarik/truthscale/issues/3) | Establish the ceiling without disrupting what is running. Refuses on a busy GPU |
+| [Helm chart and exporter](https://github.com/ehtishammubarik/truthscale/issues/4) | DaemonSet, ServiceMonitor, Grafana dashboard. An unavailable field is omitted, never exported as 0 |
+| [Worked example](https://github.com/ehtishammubarik/truthscale/issues/6) | Real cluster, real numbers, including a false positive |
 | Ceiling store and ageing | Re-measure on a schedule, on driver change, and on MIG profile change |
-| `truthscale export` | Prometheus endpoint, with `ceiling_ratio` as the headline series |
-| DaemonSet and Helm chart | Plus a ServiceMonitor and a Grafana dashboard as a real artifact |
-| Alerting rules | With the rationale for each, because a rule nobody can justify gets muted |
-| Slack and webhook sink | |
+| Alerting rules and a Slack sink | With the rationale for each, because a rule nobody can justify gets muted |
 
 ## Later (v0.3): the decision engine
 
 The intellectual centre, and last on purpose.
 
+[Milestone](https://github.com/ehtishammubarik/truthscale/milestone/2).
+
 | Item | Note |
 | :--- | :--- |
-| Decision function | Given ceiling ratio, queue depth, cache pressure, and throttle state: scale up, scale down, rightsize, or do nothing. Documented and testable, not a magic number |
+| [The decision function](https://github.com/ehtishammubarik/truthscale/issues/5) | Three of the five common cases make the naive action wrong. That table is the product |
 | `truthscale recommend` | Dry run, explaining every recommendation |
 | CRD and controller | So a recommendation can become an action, behind opt-in |
 | RKE2 and Cluster Autoscaler integration | |
