@@ -51,15 +51,94 @@ every GPU. When absent it is reported absent.
 Present only when an inference server is on the GPU. Absent for training and for
 a bare node, which is normal and not a failure.
 
+**Source:** vLLM's Prometheus endpoint, scraped by `internal/vllm`. The endpoint
+is configurable; `http://127.0.0.1:8000/metrics` is vLLM's default. TGI and
+Triton expose the same shape under different names and are not read yet.
+
+Three of these are **derived from counters and are absent on a first scrape**,
+because a counter carries no rate until it has been observed twice. See
+[Rates and why the first scrape is empty](#rates-and-why-the-first-scrape-is-empty).
+
 | Field | vLLM metric | Units | Why it matters |
 |---|---|---|---|
 | `kv_cache_utilization` | `vllm:gpu_cache_usage_perc` | fraction | Explains the paradox. A full cache blocks admission while a resident kernel pins `gpu_util` at 1.0 |
 | `running_requests` | `vllm:num_requests_running` | count | The real concurrency, as against apparent busyness |
 | `queued_requests` | `vllm:num_requests_waiting` | count | Work that exists and cannot start |
-| `queue_seconds` | `vllm:request_queue_time_seconds` | seconds | What the queue costs a caller |
+| `queue_seconds` | `vllm:request_queue_time_seconds` sum and count | seconds | What the queue costs a caller. Mean over the interval, not since server start |
 | `output_tokens_per_sec` | derived from `vllm:generation_tokens_total` | tokens/s | Delivered work. Cannot be faked by a resident kernel, which is why the ceiling ratio prefers it |
 | `prompt_tokens_per_sec` | derived from `vllm:prompt_tokens_total` | tokens/s | Prefill throughput. Separate from decode because they load the GPU differently |
-| `batch_size` | derived from `running_requests` | count | A GPU at `gpu_util` 1.0 with `batch_size` 1 is the canonical wasted node |
+| `batch_size` | `vllm:num_requests_running` | count | A GPU at `gpu_util` 1.0 with `batch_size` 1 is the canonical wasted node. Instantaneous, not a windowed mean: see the note below |
+
+### Rates and why the first scrape is empty
+
+`vllm:generation_tokens_total` and `vllm:prompt_tokens_total` are counters. A
+counter is a total, not a rate, so a rate requires two observations and the
+interval between them. The collector therefore reports
+`output_tokens_per_sec` and `prompt_tokens_per_sec` **absent on the first
+scrape**, with that as the recorded reason.
+
+This is not a limitation to work around. Emitting a rate from one scrape means
+dividing a lifetime total by an arbitrary interval, which produces a number that
+looks like throughput and is not.
+
+Four cases return absent rather than a number:
+
+| Case | Why not a number |
+|---|---|
+| First scrape | No previous observation, so no interval |
+| Counter decreased | vLLM restarted inside the interval. The tokens served before the restart are gone, so the interval's true rate is unknowable. Not zero, and not the post-restart total over the whole interval, which understates it arbitrarily |
+| Interval is zero or negative | Dividing produces `+Inf` or a negative rate from a positive delta. Both render as measurements |
+| Metric missing from the exposition page | Some builds omit metrics. Absent with the metric named |
+
+A counter that genuinely did not move is a **rate of zero**, which is a
+measurement and is reported as one. Absence and zero are different answers and
+the collector keeps them apart.
+
+`queue_seconds` follows the same rule with one addition: it is
+`delta(sum) / delta(count)` over the interval, and when `delta(count)` is zero no
+request finished queueing, so there is no observation in the window. That is
+absent, not zero. Zero would claim an instant queue, which is a far more
+reassuring statement than "nothing to report".
+
+### `batch_size` is instantaneous
+
+vLLM exposes no mean-batch metric, and a mean cannot be derived from token
+counters without knowing sequence lengths. `batch_size` is
+`vllm:num_requests_running` at the instant of the scrape.
+
+It is reported rather than withheld because the instantaneous value is what makes
+the decode case legible: "utilization is 1.0 and the batch is 1" is the sentence
+this project exists to be able to say. A windowed mean arrives with the ceiling
+store, which is where the history to compute one will already live.
+
+### Multiple models on one GPU
+
+vLLM normally serves one model per process, but the metrics carry a `model_name`
+label and a multi-model process exposes several series per name. The collector
+aggregates:
+
+- **counts and counters sum**, because two models on one GPU do contend for it
+- **`kv_cache_utilization` takes the maximum**, because it is a fraction of one
+  physical cache. Summing fractions would exceed 1.0, and a mean would hide a
+  full cache behind an empty one
+
+### What the collector does not do
+
+- **No engine other than vLLM.** TGI and Triton are the same shape under
+  different names, and one engine read properly is worth more than three read
+  partially
+- **No `max_batch_size`.** vLLM carries `max_num_seqs` in its engine
+  configuration and does not put it on `/metrics`. Absent rather than inferred
+  from the highest running count seen, which is a high-water mark presented as a
+  limit
+- **No timestamp of its own.** The instant is passed in by the caller so the GPU
+  read and the serving read sit on one clock. Two pollers each calling
+  `time.Now()` cannot promise that, and without it a throughput dip cannot be
+  attributed to the GPU behaviour that caused it
+- **`NaN` is not a value.** Prometheus uses it for "no observation yet", which is
+  exactly the case this project refuses to render as a number. It parses as
+  absent
+
 
 ## Derived
 

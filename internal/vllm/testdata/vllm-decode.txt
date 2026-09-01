@@ -1,0 +1,26 @@
+# HELP vllm:num_requests_running Number of requests currently running on GPU.
+# TYPE vllm:num_requests_running gauge
+vllm:num_requests_running{model_name="meta-llama/Llama-2-7b-hf"} 1.0
+# HELP vllm:num_requests_waiting Number of requests waiting to be processed.
+# TYPE vllm:num_requests_waiting gauge
+vllm:num_requests_waiting{model_name="meta-llama/Llama-2-7b-hf"} 7.0
+# HELP vllm:gpu_cache_usage_perc GPU KV-cache usage. 1 means 100 percent usage.
+# TYPE vllm:gpu_cache_usage_perc gauge
+vllm:gpu_cache_usage_perc{model_name="meta-llama/Llama-2-7b-hf"} 0.97
+# HELP vllm:prompt_tokens_total Number of prefill tokens processed.
+# TYPE vllm:prompt_tokens_total counter
+vllm:prompt_tokens_total{model_name="meta-llama/Llama-2-7b-hf"} 100000.0
+# HELP vllm:generation_tokens_total Number of generation tokens processed.
+# TYPE vllm:generation_tokens_total counter
+vllm:generation_tokens_total{model_name="meta-llama/Llama-2-7b-hf"} 50000.0
+# HELP vllm:request_queue_time_seconds Time spent in WAITING phase for request.
+# TYPE vllm:request_queue_time_seconds histogram
+vllm:request_queue_time_seconds_bucket{le="0.1",model_name="meta-llama/Llama-2-7b-hf"} 10.0
+vllm:request_queue_time_seconds_bucket{le="+Inf",model_name="meta-llama/Llama-2-7b-hf"} 400.0
+vllm:request_queue_time_seconds_sum{model_name="meta-llama/Llama-2-7b-hf"} 800.0
+vllm:request_queue_time_seconds_count{model_name="meta-llama/Llama-2-7b-hf"} 400.0
+# HELP vllm:time_to_first_token_seconds Histogram of time to first token.
+# TYPE vllm:time_to_first_token_seconds histogram
+vllm:time_to_first_token_seconds_sum{model_name="meta-llama/Llama-2-7b-hf"} 123.4
+vllm:avg_generation_throughput_toks_per_s{model_name="meta-llama/Llama-2-7b-hf"} NaN
+python_gc_objects_collected_total{generation="0"} 1234.0

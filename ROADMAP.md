@@ -1,8 +1,11 @@
 # Roadmap
 
-Honest about status: **v0.1 does no live collection.** It reads recorded traces,
-computes the honest signal, and explains it. That is a deliberate first release,
-not an unfinished one, and the reason is in [Sequencing](#why-this-order).
+Honest about status: **v0.1 collects serving state but not GPU state.** The vLLM
+collector reads a live endpoint; the GPU side is still trace-only until the DCGM
+collector lands ([#1](https://github.com/ehtishammubarik/truthscale/issues/1)),
+so a full live sample is not yet possible. Recorded traces remain how every
+command is demonstrated and tested. The ordering is deliberate and the reason is
+in [Sequencing](#why-this-order).
 
 ## Vision
 
@@ -45,7 +48,8 @@ Shipped and tested.
 | `truthscale explain` | why the two numbers differ, in prose, per GPU |
 | **`--replay` on every command** | committed traces, so it runs on a laptop with no GPU |
 | **Absent is not zero** | typed optional metrics, absence survives JSON, tested |
-| **Serving-aware** | KV cache, queue depth, batch size, token throughput |
+| **Serving-aware** | KV cache, queue depth, batch size, token throughput, read from vLLM |
+| **vLLM collector** | reads a real vLLM `/metrics` endpoint. Rates absent on a first scrape and across a restart, never zero ([#2](https://github.com/ehtishammubarik/truthscale/issues/2)) |
 | Deterministic trace generator | `go run ./cmd/gen-traces`, verified in CI |
 
 ## Next (v0.2): live, and worth alerting on
@@ -55,7 +59,6 @@ Shipped and tested.
 | Item | Note |
 | :--- | :--- |
 | [DCGM collector](https://github.com/ehtishammubarik/truthscale/issues/1) | Read real fields. Detect and report unavailable ones rather than substituting a zero |
-| [vLLM collector](https://github.com/ehtishammubarik/truthscale/issues/2) | KV cache, queue depth, token throughput, correlated on one monotonic clock |
 | [`truthscale measure`](https://github.com/ehtishammubarik/truthscale/issues/3) | Establish the ceiling without disrupting what is running. Refuses on a busy GPU |
 | [Helm chart and exporter](https://github.com/ehtishammubarik/truthscale/issues/4) | DaemonSet, ServiceMonitor, Grafana dashboard. An unavailable field is omitted, never exported as 0 |
 | [Worked example](https://github.com/ehtishammubarik/truthscale/issues/6) | Real cluster, real numbers, including a false positive |
