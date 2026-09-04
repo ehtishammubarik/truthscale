@@ -21,6 +21,15 @@ tensor cores are close to idle. Production Kubernetes clusters average around
 **5% real GPU utilization** while their dashboards read healthy, and KEDA and
 Karpenter then autoscale on the number that caused the confusion.
 
+## Install
+
+```bash
+go install github.com/ehtishammubarik/truthscale/cmd/truthscale@v0.1.0
+```
+
+Go 1.27 or newer. No runtime dependencies, no CGO, one static binary. Or clone
+the repo and run the commands below with `go run` against the committed traces.
+
 ## Try it without a GPU
 
 Every command works against a recorded trace, so you can form an opinion in
@@ -120,14 +129,17 @@ These are enforced in code and in review, not encouraged in a doc.
 
 ## Status
 
-**Alpha, and v0.1 deliberately does no live collection.** It reads traces,
-computes the honest signal, and explains it. Passing `--replay` is required, and
-running without it prints why rather than returning an empty table that would
-let someone conclude their fleet is fine.
+**Alpha. v0.1.0 is tagged and pinnable.** It reads traces, computes the honest
+signal, and explains it. The one live path is the vLLM collector, which reads a
+serving endpoint's `/metrics` for KV cache utilization, queue depth, and token
+throughput. The GPU side is still trace-only, so `--replay` is required on `top`
+and `explain`; running without it prints why rather than returning an empty
+table that would let someone conclude their fleet is fine.
 
 Live DCGM collection, a ceiling measurement, the DaemonSet and Helm chart, and
 the scaling decision engine are [v0.2 and v0.3](ROADMAP.md), in that order and
 for a reason: nobody should act on a signal they have not learned to trust.
+[CHANGELOG.md](CHANGELOG.md) records what each tag changed.
 
 ## Prior art, and what is different
 

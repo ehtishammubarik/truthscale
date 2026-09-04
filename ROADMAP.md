@@ -62,8 +62,12 @@ Shipped and tested.
 | [`truthscale measure`](https://github.com/ehtishammubarik/truthscale/issues/3) | Establish the ceiling without disrupting what is running. Refuses on a busy GPU |
 | [Helm chart and exporter](https://github.com/ehtishammubarik/truthscale/issues/4) | DaemonSet, ServiceMonitor, Grafana dashboard. An unavailable field is omitted, never exported as 0 |
 | [Worked example](https://github.com/ehtishammubarik/truthscale/issues/6) | Real cluster, real numbers, including a false positive |
-| Ceiling store and ageing | Re-measure on a schedule, on driver change, and on MIG profile change |
-| Alerting rules and a Slack sink | With the rationale for each, because a rule nobody can justify gets muted |
+| [Ceiling store and ageing](https://github.com/ehtishammubarik/truthscale/issues/8) | Re-measure on a schedule, on driver change, and on MIG profile change. A stale ceiling is worse than none |
+| [Alerting rules and a webhook sink](https://github.com/ehtishammubarik/truthscale/issues/9) | With the rationale for each, because a rule nobody can justify gets muted |
+
+Also tracked: [TGI collector](https://github.com/ehtishammubarik/truthscale/issues/10), deferred
+out of #2 along with the question of what to do about the KV cache metric TGI does
+not expose.
 
 ## Later (v0.3): the decision engine
 
